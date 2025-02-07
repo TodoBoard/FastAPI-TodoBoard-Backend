@@ -1,9 +1,36 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
 from app.schemas import RegisterSchema
+from app.models import User
+from app.database.db import get_db
+from sqlalchemy.orm import Session
+from app.auth.token import create_token
+from app.utils.password import hash_password
+from uuid import uuid4
 
 router = APIRouter()
 
 
-@router.post("/register")
-def register(auth: RegisterSchema):
-    pass
+@router.post("/register", status_code=201)
+async def register(auth: RegisterSchema, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.username == auth.username).first():
+        raise HTTPException(status_code=400, detail="Username already taken")
+
+    new_user = User(
+        id=str(uuid4()),
+        username=auth.username,
+        password=hash_password(auth.password),
+    )
+
+    access_token = create_token(data={"sub": new_user.username})
+
+    try:
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        return {
+            "message": "User registered successfully",
+            "access_token": access_token,
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to register user")
