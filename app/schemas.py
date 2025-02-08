@@ -70,3 +70,18 @@ class TodoUpdateSchema(BaseModel):
 class ProjectUpdate(BaseModel):
     name: str
     description: str | None = None
+
+
+class TwoFASetupResponse(BaseModel):
+    secret: str
+    provisioning_uri: str
+
+
+class TwoFAEnableRequest(BaseModel):
+    totp_code: str
+
+
+class PasswordResetSchema(BaseModel):
+    username: str
+    totp_code: str
+    new_password: str
