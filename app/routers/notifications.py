@@ -5,6 +5,7 @@ from app.auth.token import get_current_user
 from app.models.notification import Notification
 from app.models.user_notification import UserNotification
 from app.schemas import NotificationResponse
+from app.utils.project import get_user_projects
 
 router = APIRouter()
 
@@ -13,7 +14,32 @@ router = APIRouter()
 def get_notifications(
     db: Session = Depends(get_db), current_user=Depends(get_current_user)
 ):
-    notifications = db.query(Notification).all()
+    user_projects = get_user_projects(db, current_user.id)
+    user_project_ids = [project.id for project in user_projects]
+
+    global_notifications = (
+        db.query(Notification)
+        .filter(
+            Notification.is_global == True,
+            Notification.project_id.in_(user_project_ids),
+        )
+        .all()
+    )
+
+    personal_notifications = (
+        db.query(Notification)
+        .join(UserNotification)
+        .filter(
+            Notification.is_global == False, UserNotification.user_id == current_user.id
+        )
+        .all()
+    )
+
+    notifications = global_notifications + personal_notifications
+
+    notifications = list({notif.id: notif for notif in notifications}.values())
+    notifications.sort(key=lambda n: n.created_at, reverse=True)
+
     result = []
     for notif in notifications:
         user_notif = (
@@ -29,6 +55,8 @@ def get_notifications(
                 description=notif.description,
                 created_at=notif.created_at,
                 read=read_flag,
+                is_global=notif.is_global,
+                project_id=notif.project_id,
             )
         )
     return result

@@ -90,9 +90,11 @@ class PasswordResetSchema(BaseModel):
 class NotificationResponse(BaseModel):
     id: str
     title: str
-    description: str | None = None
+    description: str | None
     created_at: datetime
     read: bool
+    is_global: bool
+    project_id: Optional[str] = None
 
     class Config:
         from_attributes = True

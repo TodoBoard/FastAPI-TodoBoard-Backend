@@ -12,4 +12,5 @@ class Project(Base):
     team_members = relationship("Team", back_populates="project")
     todos = relationship("Todo", back_populates="project")
     invites = relationship("Invite", back_populates="project")
+    notifications = relationship("Notification", back_populates="project")
     user = relationship("User", back_populates="projects")

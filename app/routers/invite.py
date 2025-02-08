@@ -105,6 +105,15 @@ def join_invite(
     db.add(new_team_member)
     invite.usage_count += 1
     db.commit()
+
+    from app.utils.notification_utils import create_global_notification
+
+    title = "User Joined Project"
+    description = f"User {current_user.username} has joined the project {project.name}."
+    create_global_notification(
+        db, title=title, description=description, project_id=project.id
+    )
+
     return {"message": "Joined project successfully"}
 
 
