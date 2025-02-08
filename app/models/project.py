@@ -11,4 +11,5 @@ class Project(Base):
     user_id = Column(String(36), ForeignKey("users.id"))
     team_members = relationship("Team", back_populates="project")
     todos = relationship("Todo", back_populates="project")
+    invites = relationship("Invite", back_populates="project")
     user = relationship("User", back_populates="projects")

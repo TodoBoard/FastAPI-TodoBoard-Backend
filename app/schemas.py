@@ -96,3 +96,26 @@ class NotificationResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class InviteCreate(BaseModel):
+    duration: Optional[str] = None  # e.g. "24h", "7d", "30d", or None for never expire
+    max_usage: Optional[int] = None  # positive integer or None for unlimited
+
+
+class InviteUpdate(BaseModel):
+    duration: Optional[str] = None
+    max_usage: Optional[int] = None
+    active: Optional[bool] = None
+
+
+class InviteResponse(BaseModel):
+    id: str
+    project_id: str
+    expires_at: Optional[datetime] = None
+    max_usage: Optional[int] = None
+    usage_count: int
+    active: bool
+
+    class Config:
+        from_attributes = True
