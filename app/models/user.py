@@ -12,3 +12,4 @@ class User(Base):
     pending_twofa_secret = Column(String(32), nullable=True)
     projects = relationship("Project", back_populates="user")
     todos = relationship("Todo", back_populates="user")
+    notifications = relationship("UserNotification", back_populates="user")

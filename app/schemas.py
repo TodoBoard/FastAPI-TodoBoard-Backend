@@ -85,3 +85,14 @@ class PasswordResetSchema(BaseModel):
     username: str
     totp_code: str
     new_password: str
+
+
+class NotificationResponse(BaseModel):
+    id: str
+    title: str
+    description: str | None = None
+    created_at: datetime
+    read: bool
+
+    class Config:
+        from_attributes = True

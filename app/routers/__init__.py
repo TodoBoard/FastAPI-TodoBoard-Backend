@@ -6,6 +6,7 @@ from .todo import router as todo_router
 from .team import router as team_router
 from .twofa import router as twofa_router
 from .password_reset import router as password_reset_router
+from .notifications import router as notifications_router
 
 router = APIRouter()
 router.include_router(login_router, tags=["auth"])
@@ -15,3 +16,4 @@ router.include_router(todo_router, tags=["dashboard"])
 router.include_router(team_router, tags=["dashboard"])
 router.include_router(twofa_router, tags=["2FA"])
 router.include_router(password_reset_router, tags=["auth"])
+router.include_router(notifications_router, tags=["notifications"])
