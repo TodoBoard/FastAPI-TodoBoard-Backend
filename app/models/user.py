@@ -8,5 +8,5 @@ class User(Base):
     id = Column(String(36), primary_key=True)
     username = Column(String(50), nullable=False)
     password = Column(String(255), nullable=False)
+    projects = relationship("Project", back_populates="user")
     todos = relationship("Todo", back_populates="user")
-    team_members = relationship("Team", back_populates="user")

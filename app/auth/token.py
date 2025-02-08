@@ -5,6 +5,9 @@ import os
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from app.database.db import get_db
+from app.models.user import User
 
 load_dotenv()
 
@@ -28,7 +31,9 @@ def verify_token(token: str) -> Optional[dict]:
         return None
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
+async def get_current_user(
+    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -43,4 +48,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
     if username is None:
         raise credentials_exception
 
-    return username
+    user = db.query(User).filter(User.username == username).first()
+    if user is None:
+        raise credentials_exception
+
+    return user

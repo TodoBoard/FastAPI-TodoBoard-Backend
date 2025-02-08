@@ -9,5 +9,4 @@ class Team(Base):
     project_id = Column(String(36), ForeignKey("projects.id"), nullable=False)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     project = relationship("Project", back_populates="team_members")
-    user = relationship("User", back_populates="team_members")
-    todos = relationship("Todo", back_populates="team")
+    user = relationship("User")

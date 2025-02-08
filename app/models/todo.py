@@ -31,8 +31,6 @@ class Todo(Base):
     )
     finished_at = Column(DateTime, nullable=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
-    team_id = Column(String(36), ForeignKey("teams.id"), nullable=True)
     project_id = Column(String(36), ForeignKey("projects.id"), nullable=False)
     user = relationship("User", back_populates="todos")
-    team = relationship("Team", back_populates="todos")
     project = relationship("Project", back_populates="todos")
