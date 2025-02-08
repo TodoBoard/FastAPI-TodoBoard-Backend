@@ -172,3 +172,5 @@ cython_debug/
 
 files.txt
 get_all_files.py
+answer.py
+input.txt

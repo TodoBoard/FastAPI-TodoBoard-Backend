@@ -77,7 +77,7 @@ class TwoFASetupResponse(BaseModel):
     provisioning_uri: str
 
 
-class TwoFAEnableRequest(BaseModel):
+class TwoFARequest(BaseModel):
     totp_code: str
 
 

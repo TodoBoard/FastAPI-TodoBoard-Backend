@@ -3,7 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.auth.token import get_current_user
 from app.database.db import get_db
-from app.schemas import TwoFASetupResponse, TwoFAEnableRequest
+from app.schemas import (
+    TwoFASetupResponse,
+    TwoFARequest,
+)
 from app.models.user import User
 
 router = APIRouter()
@@ -27,7 +30,7 @@ def twofa_setup(
 
 @router.post("/2fa/enable", tags=["2FA"])
 def twofa_enable(
-    request: TwoFAEnableRequest,
+    request: TwoFARequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -42,3 +45,20 @@ def twofa_enable(
     current_user.pending_twofa_secret = None
     db.commit()
     return {"message": "2FA enabled successfully"}
+
+
+@router.post("/2fa/disable", tags=["2FA"])
+def twofa_disable(
+    request: TwoFARequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user.twofa_secret:
+        raise HTTPException(status_code=400, detail="2FA is not enabled")
+    totp = pyotp.TOTP(current_user.twofa_secret)
+    if not totp.verify(request.totp_code):
+        raise HTTPException(status_code=401, detail="Invalid 2FA code")
+    current_user.twofa_secret = None
+    current_user.pending_twofa_secret = None
+    db.commit()
+    return {"message": "2FA disabled successfully"}
