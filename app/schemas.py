@@ -65,7 +65,6 @@ class TodoUpdateSchema(BaseModel):
     status: Optional[TodoStatus] = None
     priority: Optional[TodoPriority] = None
     due_date: Optional[datetime] = None
-    finished_at: Optional[datetime] = None
 
 
 class ProjectUpdate(BaseModel):
