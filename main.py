@@ -6,6 +6,9 @@ from app.models import (
     todo,
     team,
     project,
+    invite,
+    notification,
+    user_notification,
 )  # Import all models to ensure they are registered
 
 app = FastAPI()

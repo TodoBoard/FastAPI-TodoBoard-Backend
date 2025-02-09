@@ -6,6 +6,8 @@ from app.schemas import (
     ProjectResponse,
     ProjectListResponse,
     ProjectUpdate,
+    ProjectSortingUpdate,
+    ProjectSortingResponse,
 )
 from app.utils.project import (
     create_project,
@@ -16,6 +18,7 @@ from app.utils.project import (
 from app.auth.token import get_current_user
 from app.models import User
 from app.models.team import Team
+from app.models.user_project_sorting import UserProjectSorting
 
 router = APIRouter()
 
@@ -38,9 +41,26 @@ def list_projects(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     projects = get_user_projects(db, current_user.id)
-    for project in projects:
-        project.is_owner = project.user_id == current_user.id
-    return ProjectListResponse(projects=projects)
+    project_dict = {project.id: project for project in projects}
+
+    sorting_record = (
+        db.query(UserProjectSorting)
+        .filter(UserProjectSorting.user_id == current_user.id)
+        .first()
+    )
+
+    sorted_projects = []
+    if sorting_record:
+        for proj_id in sorting_record.sorting:
+            if proj_id in project_dict:
+                proj = project_dict.pop(proj_id)
+                proj.is_owner = proj.user_id == current_user.id
+                sorted_projects.append(proj)
+    for proj in project_dict.values():
+        proj.is_owner = proj.user_id == current_user.id
+        sorted_projects.append(proj)
+
+    return ProjectListResponse(projects=sorted_projects)
 
 
 @router.get("/project/{project_id}", response_model=ProjectResponse)
@@ -134,3 +154,26 @@ def leave_project(
     )
 
     return {"message": "Left project successfully"}
+
+
+@router.put("/projects/sort", response_model=ProjectSortingResponse)
+def update_project_sorting(
+    sorting_update: ProjectSortingUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    sorting_record = (
+        db.query(UserProjectSorting)
+        .filter(UserProjectSorting.user_id == current_user.id)
+        .first()
+    )
+    if sorting_record:
+        sorting_record.sorting = sorting_update.project_ids
+    else:
+        sorting_record = UserProjectSorting(
+            user_id=current_user.id, sorting=sorting_update.project_ids
+        )
+        db.add(sorting_record)
+    db.commit()
+    db.refresh(sorting_record)
+    return ProjectSortingResponse(project_ids=sorting_record.sorting)

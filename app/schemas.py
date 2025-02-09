@@ -121,3 +121,11 @@ class InviteResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ProjectSortingUpdate(BaseModel):
+    project_ids: List[str]
+
+
+class ProjectSortingResponse(BaseModel):
+    project_ids: List[str]
