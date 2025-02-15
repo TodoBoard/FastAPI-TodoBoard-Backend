@@ -11,7 +11,7 @@ from app.models import (
     notification,
     user_notification,
     user_project_sorting,
-)  # Import all models to ensure they are registered
+)
 
 app = FastAPI()
 

@@ -5,60 +5,35 @@ from app.auth.token import get_current_user
 from app.models.notification import Notification
 from app.models.user_notification import UserNotification
 from app.schemas import NotificationResponse
-from app.utils.project import get_user_projects
+from typing import List
 
 router = APIRouter()
 
 
-@router.get("/notifications", response_model=list[NotificationResponse])
+@router.get("/notifications", response_model=List[NotificationResponse])
 def get_notifications(
     db: Session = Depends(get_db), current_user=Depends(get_current_user)
 ):
-    user_projects = get_user_projects(db, current_user.id)
-    user_project_ids = [project.id for project in user_projects]
-
-    global_notifications = (
-        db.query(Notification)
-        .filter(
-            Notification.is_global == True,
-            Notification.project_id.in_(user_project_ids),
-        )
+    user_notifs = (
+        db.query(UserNotification)
+        .join(Notification)
+        .filter(UserNotification.user_id == current_user.id)
         .all()
     )
-
-    personal_notifications = (
-        db.query(Notification)
-        .join(UserNotification)
-        .filter(
-            Notification.is_global == False, UserNotification.user_id == current_user.id
-        )
-        .all()
-    )
-
-    notifications = global_notifications + personal_notifications
-
-    notifications = list({notif.id: notif for notif in notifications}.values())
-    notifications.sort(key=lambda n: n.created_at, reverse=True)
-
     result = []
-    for notif in notifications:
-        user_notif = (
-            db.query(UserNotification)
-            .filter_by(user_id=current_user.id, notification_id=notif.id)
-            .first()
-        )
-        read_flag = user_notif.read if user_notif else False
+    for un in user_notifs:
+        notif = un.notification
         result.append(
             NotificationResponse(
                 id=notif.id,
                 title=notif.title,
                 description=notif.description,
                 created_at=notif.created_at,
-                read=read_flag,
-                is_global=notif.is_global,
+                read=un.read,
                 project_id=notif.project_id,
             )
         )
+    result.sort(key=lambda n: n.created_at, reverse=True)
     return result
 
 
@@ -68,24 +43,15 @@ def mark_notification_as_read(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    notification = (
-        db.query(Notification).filter(Notification.id == notification_id).first()
-    )
-    if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
     user_notif = (
         db.query(UserNotification)
         .filter_by(user_id=current_user.id, notification_id=notification_id)
         .first()
     )
-    if user_notif:
-        if user_notif.read:
-            return {"message": "Notification already marked as read"}
-        user_notif.read = True
-    else:
-        user_notif = UserNotification(
-            user_id=current_user.id, notification_id=notification_id, read=True
-        )
-        db.add(user_notif)
+    if not user_notif:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    if user_notif.read:
+        return {"message": "Notification already marked as read"}
+    user_notif.read = True
     db.commit()
     return {"message": "Notification marked as read"}

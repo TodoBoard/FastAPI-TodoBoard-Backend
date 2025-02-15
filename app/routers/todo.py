@@ -13,8 +13,7 @@ router = APIRouter()
 
 @router.get("/todos", response_model=TodoListResponse)
 def get_todos(
-    project: Project = Depends(require_project_member),
-    db: Session = Depends(get_db),
+    project: Project = Depends(require_project_member), db: Session = Depends(get_db)
 ):
     todos = get_project_todos(db, project.id)
     return TodoListResponse(todos=todos)

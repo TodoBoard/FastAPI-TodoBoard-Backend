@@ -11,8 +11,26 @@ from datetime import datetime, timedelta
 from typing import List
 import uuid
 from app.dependencies.permissions import require_project_owner, require_invite_owner
+from app.utils.notification_utils import create_project_notification
 
 router = APIRouter()
+
+
+def parse_duration(duration: str) -> datetime:
+    if duration.endswith("h"):
+        try:
+            hours = int(duration[:-1])
+            return datetime.utcnow() + timedelta(hours=hours)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid duration format")
+    elif duration.endswith("d"):
+        try:
+            days = int(duration[:-1])
+            return datetime.utcnow() + timedelta(days=days)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid duration format")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid duration format")
 
 
 @router.post("/project/{project_id}/invite", response_model=InviteResponse)
@@ -21,28 +39,11 @@ def create_invite(
     project: Project = Depends(require_project_owner),
     db: Session = Depends(get_db),
 ):
-    expires_at = None
-    if invite_data.duration:
-        if invite_data.duration.endswith("h"):
-            try:
-                hours = int(invite_data.duration[:-1])
-                expires_at = datetime.utcnow() + timedelta(hours=hours)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid duration format")
-        elif invite_data.duration.endswith("d"):
-            try:
-                days = int(invite_data.duration[:-1])
-                expires_at = datetime.utcnow() + timedelta(days=days)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid duration format")
-        else:
-            raise HTTPException(status_code=400, detail="Invalid duration format")
-
+    expires_at = parse_duration(invite_data.duration) if invite_data.duration else None
     if invite_data.max_usage is not None and invite_data.max_usage <= 0:
         raise HTTPException(
             status_code=400, detail="max_usage must be a positive integer"
         )
-
     new_invite = Invite(
         id=str(uuid.uuid4()),
         project_id=project.id,
@@ -80,7 +81,6 @@ def join_invite(
         raise HTTPException(status_code=400, detail="Invite has expired")
     if invite.max_usage is not None and invite.usage_count >= invite.max_usage:
         raise HTTPException(status_code=400, detail="Invite usage limit reached")
-
     project = db.query(Project).filter(Project.id == invite.project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -88,7 +88,6 @@ def join_invite(
         tm.user_id == current_user.id for tm in project.team_members
     ):
         raise HTTPException(status_code=400, detail="User is already a team member")
-
     new_team_member = Team(
         id=str(uuid.uuid4()),
         project_id=project.id,
@@ -97,15 +96,11 @@ def join_invite(
     db.add(new_team_member)
     invite.usage_count += 1
     db.commit()
-
-    from app.utils.notification_utils import create_global_notification
-
     title = "User Joined Project"
     description = f"User {current_user.username} has joined the project {project.name}."
-    create_global_notification(
+    create_project_notification(
         db, title=title, description=description, project_id=project.id
     )
-
     return {"message": "Joined project successfully"}
 
 
@@ -116,31 +111,15 @@ def update_invite(
     db: Session = Depends(get_db),
 ):
     if invite_update.duration is not None:
-        if invite_update.duration.endswith("h"):
-            try:
-                hours = int(invite_update.duration[:-1])
-                invite.expires_at = datetime.utcnow() + timedelta(hours=hours)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid duration format")
-        elif invite_update.duration.endswith("d"):
-            try:
-                days = int(invite_update.duration[:-1])
-                invite.expires_at = datetime.utcnow() + timedelta(days=days)
-            except ValueError:
-                raise HTTPException(status_code=400, detail="Invalid duration format")
-        else:
-            raise HTTPException(status_code=400, detail="Invalid duration format")
-
+        invite.expires_at = parse_duration(invite_update.duration)
     if invite_update.max_usage is not None:
         if invite_update.max_usage <= 0:
             raise HTTPException(
                 status_code=400, detail="max_usage must be a positive integer"
             )
         invite.max_usage = invite_update.max_usage
-
     if invite_update.active is not None:
         invite.active = invite_update.active
-
     db.commit()
     db.refresh(invite)
     return invite

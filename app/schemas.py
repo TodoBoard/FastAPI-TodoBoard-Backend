@@ -15,12 +15,22 @@ class RegisterSchema(LoginSchema):
 
 class ProjectCreate(BaseModel):
     name: str
-    description: str | None = None
+    description: Optional[str] = None
+
+
+class TeamMemberResponse(BaseModel):
+    id: str
+    username: str
+    avatar_id: int
+
+    class Config:
+        from_attributes = True
 
 
 class ProjectResponse(ProjectCreate):
     id: str
     is_owner: bool
+    team_members: List[TeamMemberResponse] = []
 
     class Config:
         from_attributes = True
@@ -28,6 +38,7 @@ class ProjectResponse(ProjectCreate):
 
 class ProjectListResponse(BaseModel):
     projects: List[ProjectResponse]
+    unread_notifications_count: int
 
 
 class TodoCreate(BaseModel):
@@ -41,13 +52,13 @@ class TodoCreate(BaseModel):
 class TodoResponse(BaseModel):
     id: str
     title: str
-    description: str | None
+    description: Optional[str]
     status: TodoStatus
     priority: TodoPriority
-    due_date: datetime | None
+    due_date: Optional[datetime]
     created_at: datetime
     updated_at: datetime
-    finished_at: datetime | None
+    finished_at: Optional[datetime]
     user_id: str
     project_id: str
 
@@ -69,7 +80,7 @@ class TodoUpdateSchema(BaseModel):
 
 class ProjectUpdate(BaseModel):
     name: str
-    description: str | None = None
+    description: Optional[str] = None
 
 
 class TwoFASetupResponse(BaseModel):
@@ -81,6 +92,11 @@ class TwoFARequest(BaseModel):
     totp_code: str
 
 
+# New schema for password reset check endpoint
+class PasswordResetCheckSchema(BaseModel):
+    username: str
+
+
 class PasswordResetSchema(BaseModel):
     username: str
     totp_code: str
@@ -90,10 +106,9 @@ class PasswordResetSchema(BaseModel):
 class NotificationResponse(BaseModel):
     id: str
     title: str
-    description: str | None
+    description: Optional[str]
     created_at: datetime
     read: bool
-    is_global: bool
     project_id: Optional[str] = None
 
     class Config:
@@ -101,8 +116,8 @@ class NotificationResponse(BaseModel):
 
 
 class InviteCreate(BaseModel):
-    duration: Optional[str] = None  # e.g. "24h", "7d", "30d", or None for never expire
-    max_usage: Optional[int] = None  # positive integer or None for unlimited
+    duration: Optional[str] = None
+    max_usage: Optional[int] = None
 
 
 class InviteUpdate(BaseModel):

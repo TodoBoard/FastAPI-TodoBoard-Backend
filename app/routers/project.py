@@ -9,17 +9,23 @@ from app.schemas import (
     ProjectSortingUpdate,
     ProjectSortingResponse,
 )
-from app.utils.project import (
-    create_project,
-    get_user_projects,
-    update_project,
-)
+from app.utils.project import create_project, get_user_projects, update_project
 from app.auth.token import get_current_user
 from app.models import User
 from app.models.team import Team
 from app.models.user_project_sorting import UserProjectSorting
 from app.dependencies.permissions import require_project_member, require_project_owner
 from app.models.project import Project
+from app.models.user_notification import UserNotification
+from app.utils.notification_utils import (
+    create_project_notification,
+    create_personal_notification,
+)
+from app.utils.team_helpers import (
+    build_team_members_for_non_owner,
+    build_team_members_for_owner,
+)
+import uuid
 
 router = APIRouter()
 
@@ -33,8 +39,20 @@ def create_new_project(
     new_project = create_project(
         db, name=project.name, description=project.description, user_id=current_user.id
     )
-    new_project.is_owner = True
-    return new_project
+    response_data = {
+        "id": new_project.id,
+        "name": new_project.name,
+        "description": new_project.description,
+        "is_owner": True,
+        "team_members": [
+            {
+                "id": current_user.id,
+                "username": "You",
+                "avatar_id": current_user.avatar_id,
+            }
+        ],
+    }
+    return response_data
 
 
 @router.get("/projects", response_model=ProjectListResponse)
@@ -43,30 +61,65 @@ def list_projects(
 ):
     projects = get_user_projects(db, current_user.id)
     project_dict = {project.id: project for project in projects}
-
     sorting_record = (
         db.query(UserProjectSorting)
         .filter(UserProjectSorting.user_id == current_user.id)
         .first()
     )
-
     sorted_projects = []
     if sorting_record:
         for proj_id in sorting_record.sorting:
             if proj_id in project_dict:
                 proj = project_dict.pop(proj_id)
-                proj.is_owner = proj.user_id == current_user.id
                 sorted_projects.append(proj)
     for proj in project_dict.values():
-        proj.is_owner = proj.user_id == current_user.id
         sorted_projects.append(proj)
-
-    return ProjectListResponse(projects=sorted_projects)
+    project_responses = []
+    for project in sorted_projects:
+        is_owner = project.user_id == current_user.id
+        members = (
+            build_team_members_for_owner(current_user)
+            if is_owner
+            else build_team_members_for_non_owner(project, current_user)
+        )
+        project_data = {
+            "id": project.id,
+            "name": project.name,
+            "description": project.description,
+            "is_owner": is_owner,
+            "team_members": members,
+        }
+        project_responses.append(project_data)
+    global_unread_count = (
+        db.query(UserNotification)
+        .filter_by(user_id=current_user.id, read=False)
+        .count()
+    )
+    return ProjectListResponse(
+        projects=project_responses, unread_notifications_count=global_unread_count
+    )
 
 
 @router.get("/project/{project_id}", response_model=ProjectResponse)
-def get_project_by_id(project: Project = Depends(require_project_member)):
-    return project
+def get_project_by_id(
+    project: Project = Depends(require_project_member),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    is_owner = project.user_id == current_user.id
+    members = (
+        build_team_members_for_owner(current_user)
+        if is_owner
+        else build_team_members_for_non_owner(project, current_user)
+    )
+    response_data = {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "is_owner": is_owner,
+        "team_members": members,
+    }
+    return response_data
 
 
 @router.put("/project/{project_id}", response_model=ProjectResponse)
@@ -74,12 +127,20 @@ def update_project_endpoint(
     project_update: ProjectUpdate,
     project: Project = Depends(require_project_owner),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     updated_project = update_project(
         db, project, project_update.name, project_update.description
     )
-    updated_project.is_owner = True
-    return updated_project
+    members = build_team_members_for_owner(current_user)
+    response_data = {
+        "id": updated_project.id,
+        "name": updated_project.name,
+        "description": updated_project.description,
+        "is_owner": True,
+        "team_members": members,
+    }
+    return response_data
 
 
 @router.post("/project/{project_id}/leave", response_model=dict)
@@ -88,11 +149,10 @@ def leave_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if project.is_owner:
+    if project.user_id == current_user.id:
         raise HTTPException(
             status_code=400, detail="Project owner cannot leave the project"
         )
-
     team_member = (
         db.query(Team)
         .filter(Team.project_id == project.id, Team.user_id == current_user.id)
@@ -104,20 +164,13 @@ def leave_project(
         )
     db.delete(team_member)
     db.commit()
-
-    from app.utils.notification_utils import (
-        create_global_notification,
-        create_personal_notification,
-    )
-
     title_global = "User Left Project"
     description_global = (
         f"User {current_user.username} has left the project {project.name}."
     )
-    create_global_notification(
+    create_project_notification(
         db, title=title_global, description=description_global, project_id=project.id
     )
-
     title_personal = "Left Project Confirmation"
     description_personal = f"You have successfully left the project {project.name}."
     create_personal_notification(
@@ -126,7 +179,6 @@ def leave_project(
         title=title_personal,
         description=description_personal,
     )
-
     return {"message": "Left project successfully"}
 
 
