@@ -11,7 +11,7 @@ from app.dependencies.permissions import require_project_member, require_todo_pe
 router = APIRouter()
 
 
-@router.get("/todos", response_model=TodoListResponse)
+@router.get("/todos/{project_id}", response_model=TodoListResponse)
 def get_todos(
     project: Project = Depends(require_project_member), db: Session = Depends(get_db)
 ):

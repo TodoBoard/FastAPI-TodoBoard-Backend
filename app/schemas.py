@@ -92,7 +92,6 @@ class TwoFARequest(BaseModel):
     totp_code: str
 
 
-# New schema for password reset check endpoint
 class PasswordResetCheckSchema(BaseModel):
     username: str
 
@@ -144,3 +143,20 @@ class ProjectSortingUpdate(BaseModel):
 
 class ProjectSortingResponse(BaseModel):
     project_ids: List[str]
+
+
+class ProjectStatistic(BaseModel):
+    id: str
+    name: str
+    team_members: List[TeamMemberResponse]
+    open_tasks: int
+    total_tasks: int
+    percentage: float
+
+    class Config:
+        from_attributes = True
+
+
+class ProjectStatisticsResponse(BaseModel):
+    own_projects: List[ProjectStatistic]
+    joined_projects: List[ProjectStatistic]
