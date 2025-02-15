@@ -32,8 +32,11 @@ async def register(auth: RegisterSchema, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(new_user)
         return {
-            "message": "User registered successfully",
+            "message": "You have successfully registered",
+            "token_type": "bearer",
             "access_token": access_token,
+            "username": new_user.username,
+            "avatar_id": new_user.avatar_id,
         }
     except Exception as e:
         db.rollback()

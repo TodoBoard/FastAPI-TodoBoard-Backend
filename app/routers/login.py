@@ -23,7 +23,9 @@ def login(auth: LoginSchema, db: Session = Depends(get_db), remember_me: bool = 
     )
 
     return {
-        "access_token": access_token,
+        "message": "You have successfully logged in",
         "token_type": "bearer",
+        "access_token": access_token,
         "username": user.username,
+        "avatar_id": user.avatar_id,
     }
