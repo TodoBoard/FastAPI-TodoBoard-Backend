@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Integer
 from sqlalchemy.orm import relationship
 from app.database.db import Base
 
@@ -10,6 +10,8 @@ class User(Base):
     password = Column(String(255), nullable=False)
     twofa_secret = Column(String(32), nullable=True)
     pending_twofa_secret = Column(String(32), nullable=True)
+    avatar_id = Column(Integer, nullable=False)
+
     projects = relationship("Project", back_populates="user")
     todos = relationship("Todo", back_populates="user")
     notifications = relationship("UserNotification", back_populates="user")

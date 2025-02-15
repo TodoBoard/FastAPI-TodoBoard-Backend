@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.routers import router
 from app.database.db import engine, Base
 from app.models import (
@@ -9,9 +10,20 @@ from app.models import (
     invite,
     notification,
     user_notification,
+    user_project_sorting,
 )  # Import all models to ensure they are registered
 
 app = FastAPI()
+
+origins = ["http://localhost:3000"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 Base.metadata.create_all(bind=engine)
 

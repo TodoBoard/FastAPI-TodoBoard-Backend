@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database.db import get_db
 from app.schemas import (
@@ -12,13 +12,14 @@ from app.schemas import (
 from app.utils.project import (
     create_project,
     get_user_projects,
-    get_project,
     update_project,
 )
 from app.auth.token import get_current_user
 from app.models import User
 from app.models.team import Team
 from app.models.user_project_sorting import UserProjectSorting
+from app.dependencies.permissions import require_project_member, require_project_owner
+from app.models.project import Project
 
 router = APIRouter()
 
@@ -64,40 +65,16 @@ def list_projects(
 
 
 @router.get("/project/{project_id}", response_model=ProjectResponse)
-def get_project_by_id(
-    project_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    project = get_project(db, project_id)
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    is_owner = project.user_id == current_user.id
-    is_team_member = any(tm.user_id == current_user.id for tm in project.team_members)
-    if not (is_owner or is_team_member):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this project",
-        )
-    project.is_owner = is_owner
+def get_project_by_id(project: Project = Depends(require_project_member)):
     return project
 
 
 @router.put("/project/{project_id}", response_model=ProjectResponse)
 def update_project_endpoint(
-    project_id: str,
     project_update: ProjectUpdate,
+    project: Project = Depends(require_project_owner),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    project = get_project(db, project_id)
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if project.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the project owner can update the project",
-        )
     updated_project = update_project(
         db, project, project_update.name, project_update.description
     )
@@ -107,21 +84,18 @@ def update_project_endpoint(
 
 @router.post("/project/{project_id}/leave", response_model=dict)
 def leave_project(
-    project_id: str,
+    project: Project = Depends(require_project_member),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    project = get_project(db, project_id)
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if project.user_id == current_user.id:
+    if project.is_owner:
         raise HTTPException(
             status_code=400, detail="Project owner cannot leave the project"
         )
 
     team_member = (
         db.query(Team)
-        .filter(Team.project_id == project_id, Team.user_id == current_user.id)
+        .filter(Team.project_id == project.id, Team.user_id == current_user.id)
         .first()
     )
     if not team_member:

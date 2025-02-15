@@ -10,25 +10,17 @@ from app.models.user import User
 from datetime import datetime, timedelta
 from typing import List
 import uuid
+from app.dependencies.permissions import require_project_owner, require_invite_owner
 
 router = APIRouter()
 
 
 @router.post("/project/{project_id}/invite", response_model=InviteResponse)
 def create_invite(
-    project_id: str,
     invite_data: InviteCreate,
+    project: Project = Depends(require_project_owner),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if project.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Only the project owner can create invites"
-        )
-
     expires_at = None
     if invite_data.duration:
         if invite_data.duration.endswith("h"):
@@ -53,7 +45,7 @@ def create_invite(
 
     new_invite = Invite(
         id=str(uuid.uuid4()),
-        project_id=project_id,
+        project_id=project.id,
         expires_at=expires_at,
         max_usage=invite_data.max_usage,
         usage_count=0,
@@ -119,20 +111,10 @@ def join_invite(
 
 @router.patch("/invite/{invite_id}", response_model=InviteResponse)
 def update_invite(
-    invite_id: str,
     invite_update: InviteUpdate,
+    invite: Invite = Depends(require_invite_owner),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    invite = db.query(Invite).filter(Invite.id == invite_id).first()
-    if not invite:
-        raise HTTPException(status_code=404, detail="Invite not found")
-    project = db.query(Project).filter(Project.id == invite.project_id).first()
-    if not project or project.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to update this invite"
-        )
-
     if invite_update.duration is not None:
         if invite_update.duration.endswith("h"):
             try:
@@ -166,18 +148,9 @@ def update_invite(
 
 @router.delete("/invite/{invite_id}")
 def delete_invite(
-    invite_id: str,
+    invite: Invite = Depends(require_invite_owner),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    invite = db.query(Invite).filter(Invite.id == invite_id).first()
-    if not invite:
-        raise HTTPException(status_code=404, detail="Invite not found")
-    project = db.query(Project).filter(Project.id == invite.project_id).first()
-    if not project or project.user_id != current_user.id:
-        raise HTTPException(
-            status_code=403, detail="Not authorized to delete this invite"
-        )
     db.delete(invite)
     db.commit()
     return {"message": "Invite deleted successfully"}

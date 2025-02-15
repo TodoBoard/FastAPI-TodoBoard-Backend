@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.auth.token import create_token
 from app.utils.password import hash_password
 from uuid import uuid4
+import random
 
 router = APIRouter()
 
@@ -15,10 +16,13 @@ async def register(auth: RegisterSchema, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == auth.username).first():
         raise HTTPException(status_code=400, detail="Username already taken")
 
+    avatar_id = random.randint(1, 20)
+
     new_user = User(
         id=str(uuid4()),
         username=auth.username,
         password=hash_password(auth.password),
+        avatar_id=avatar_id,
     )
 
     access_token = create_token(data={"sub": new_user.username})
