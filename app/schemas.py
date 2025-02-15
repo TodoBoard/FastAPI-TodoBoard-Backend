@@ -158,5 +158,5 @@ class ProjectStatistic(BaseModel):
 
 
 class ProjectStatisticsResponse(BaseModel):
-    own_projects: List[ProjectStatistic]
-    joined_projects: List[ProjectStatistic]
+    my_projects: List[ProjectStatistic]
+    invited_projects: List[ProjectStatistic]

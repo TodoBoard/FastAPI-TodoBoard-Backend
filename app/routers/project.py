@@ -213,8 +213,8 @@ def get_project_statistics(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     projects = get_user_projects(db, current_user.id)
-    own_projects = []
-    joined_projects = []
+    my_projects = []
+    invited_projects = []
     for project in projects:
         todos = get_project_todos(db, project.id)
         total_tasks = len(todos)
@@ -232,7 +232,7 @@ def get_project_statistics(
                 "total_tasks": total_tasks,
                 "percentage": percentage,
             }
-            own_projects.append(project_data)
+            my_projects.append(project_data)
         else:
             team_members = build_team_members_for_non_owner(project, current_user)
             project_data = {
@@ -243,5 +243,5 @@ def get_project_statistics(
                 "total_tasks": total_tasks,
                 "percentage": percentage,
             }
-            joined_projects.append(project_data)
-    return {"own_projects": own_projects, "joined_projects": joined_projects}
+            invited_projects.append(project_data)
+    return {"my_projects": my_projects, "invited_projects": invited_projects}
