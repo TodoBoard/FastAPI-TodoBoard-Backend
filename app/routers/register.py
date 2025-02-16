@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
-from app.schemas.auth import RegisterSchema
-from app.models import User
-from app.database.db import get_db
-from sqlalchemy.orm import Session
 from app.auth.token import create_token
+from app.database.db import get_db
+from app.models import User
+from app.schemas.auth import RegisterSchema
 from app.utils.password import hash_password
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 from uuid import uuid4
 import random
 

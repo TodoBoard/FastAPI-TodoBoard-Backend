@@ -1,7 +1,7 @@
-from pydantic import BaseModel
-from typing import Optional
 from datetime import datetime
-from app.models.todo import TodoStatus, TodoPriority
+from typing import Optional
+from app.models.todo import TodoPriority, TodoStatus
+from pydantic import BaseModel
 
 
 class TodoCreate(BaseModel):

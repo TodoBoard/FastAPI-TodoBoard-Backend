@@ -1,12 +1,12 @@
-from fastapi import Depends, HTTPException, status, Path
-from sqlalchemy.orm import Session
-from app.database.db import get_db
 from app.auth.token import get_current_user
-from app.models.user import User
-from app.models.project import Project
+from app.database.db import get_db
 from app.models.invite import Invite
+from app.models.project import Project
 from app.models.todo import Todo
+from app.models.user import User
 from app.utils.project import get_project
+from fastapi import Depends, HTTPException, Path, status
+from sqlalchemy.orm import Session
 
 
 def require_project_member(

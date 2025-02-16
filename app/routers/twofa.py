@@ -1,10 +1,10 @@
-import pyotp
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from app.auth.token import get_current_user
 from app.database.db import get_db
-from app.schemas.auth import TwoFASetupResponse, TwoFARequest
 from app.models.user import User
+from app.schemas.auth import TwoFARequest, TwoFASetupResponse
+from fastapi import APIRouter, Depends, HTTPException
+import pyotp
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

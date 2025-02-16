@@ -1,17 +1,17 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from app.routers import router
-from app.database.db import engine, Base
+from app.database.db import Base, engine
 from app.models import (
-    user,
-    todo,
-    team,
-    project,
     invite,
     notification,
+    project,
+    team,
+    todo,
+    user,
     user_notification,
     user_project_sorting,
 )
+from app.routers import router
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 

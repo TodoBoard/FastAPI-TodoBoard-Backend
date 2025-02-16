@@ -1,17 +1,17 @@
+from app.auth.token import get_current_user
+from app.database.db import get_db
+from app.dependencies.permissions import require_project_member, require_todo_permission
+from app.models import Todo, Project
+from app.models.user import User
+from app.schemas.todo import (
+    TodoCreate,
+    TodoListResponse,
+    TodoResponse,
+    TodoUpdateSchema,
+)
+from app.utils.todo_utils import create_todo, get_project_todos, update_todo
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database.db import get_db
-from app.models import Todo, Project
-from app.schemas.todo import (
-    TodoResponse,
-    TodoListResponse,
-    TodoUpdateSchema,
-    TodoCreate,
-)
-from app.utils.todo_utils import get_project_todos, update_todo, create_todo
-from app.auth.token import get_current_user
-from app.models.user import User
-from app.dependencies.permissions import require_project_member, require_todo_permission
 
 router = APIRouter()
 

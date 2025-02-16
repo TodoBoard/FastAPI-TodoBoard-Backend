@@ -1,7 +1,7 @@
-import uuid
-from sqlalchemy.orm import Session
 from app.models.notification import Notification
 from app.models.user_notification import UserNotification
+from sqlalchemy.orm import Session
+import uuid
 
 
 def create_project_notification(

@@ -1,16 +1,15 @@
+from app.auth.token import get_current_user
+from app.database.db import get_db
+from app.dependencies.permissions import require_project_member
+from app.models.project import Project
+from app.models.team import Team
+from app.models.user import User
+from app.utils.notification_utils import (
+    create_personal_notification,
+    create_project_notification,
+)
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from app.database.db import get_db
-from app.models.team import Team
-from app.models.project import Project
-from app.auth.token import get_current_user
-from app.models.user import User
-from app.dependencies.permissions import require_project_member
-from app.models.user_notification import UserNotification
-from app.utils.notification_utils import (
-    create_project_notification,
-    create_personal_notification,
-)
 
 router = APIRouter()
 

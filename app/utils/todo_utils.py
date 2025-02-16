@@ -1,7 +1,7 @@
-from app.models.todo import Todo, TodoStatus
+from datetime import datetime
 from sqlalchemy.orm import Session
 import uuid
-from datetime import datetime
+from app.models.todo import Todo, TodoStatus
 
 
 def get_project_todos(db: Session, project_id: str):

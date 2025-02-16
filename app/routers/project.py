@@ -1,34 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from app.auth.token import get_current_user
 from app.database.db import get_db
+from app.dependencies.permissions import require_project_member, require_project_owner
+from app.models import User
+from app.models.project import Project
+from app.models.todo import TodoStatus
+from app.models.user_notification import UserNotification
+from app.models.user_project_sorting import UserProjectSorting
 from app.schemas.project import (
     ProjectCreate,
-    ProjectResponse,
     ProjectListResponse,
-    ProjectUpdate,
-    ProjectSortingUpdate,
+    ProjectResponse,
     ProjectSortingResponse,
+    ProjectSortingUpdate,
     ProjectStatisticsResponse,
+    ProjectUpdate,
 )
 from app.utils.project import create_project, get_user_projects, update_project
-from app.auth.token import get_current_user
-from app.models import User
-from app.models.team import Team
-from app.models.user_project_sorting import UserProjectSorting
-from app.dependencies.permissions import require_project_member, require_project_owner
-from app.models.project import Project
-from app.models.user_notification import UserNotification
-from app.utils.notification_utils import (
-    create_project_notification,
-    create_personal_notification,
-)
 from app.utils.team_helpers import (
     build_team_members_for_owner,
     build_team_members_for_non_owner,
 )
 from app.utils.todo_utils import get_project_todos
-import uuid
-from app.models.todo import TodoStatus
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -39,13 +33,10 @@ def create_new_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    new_project = create_project(
-        db, name=project.name, description=project.description, user_id=current_user.id
-    )
+    new_project = create_project(db, name=project.name, user_id=current_user.id)
     response_data = {
         "id": new_project.id,
         "name": new_project.name,
-        "description": new_project.description,
         "team_members": [
             {
                 "id": current_user.id,
@@ -88,7 +79,6 @@ def list_projects(
         project_data = {
             "id": project.id,
             "name": project.name,
-            "description": project.description,
             "team_members": members,
         }
         if project.user_id == current_user.id:
@@ -114,16 +104,14 @@ def get_project_by_id(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    is_owner = project.user_id == current_user.id
     members = (
         build_team_members_for_owner(project, current_user)
-        if is_owner
+        if project.user_id == current_user.id
         else build_team_members_for_non_owner(project, current_user)
     )
     response_data = {
         "id": project.id,
         "name": project.name,
-        "description": project.description,
         "team_members": members,
     }
     return response_data
@@ -136,14 +124,11 @@ def update_project_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    updated_project = update_project(
-        db, project, project_update.name, project_update.description
-    )
+    updated_project = update_project(db, project, project_update.name)
     members = build_team_members_for_owner(project, current_user)
     response_data = {
         "id": updated_project.id,
         "name": updated_project.name,
-        "description": updated_project.description,
         "team_members": members,
     }
     return response_data

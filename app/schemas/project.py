@@ -1,14 +1,14 @@
+from typing import List
 from pydantic import BaseModel
-from typing import List, Optional
 
 
 class ProjectCreate(BaseModel):
     name: str
-    description: Optional[str] = None
 
 
-class ProjectResponse(ProjectCreate):
+class ProjectResponse(BaseModel):
     id: str
+    name: str
     team_members: List[dict] = []
 
     class Config:
@@ -23,7 +23,6 @@ class ProjectListResponse(BaseModel):
 
 class ProjectUpdate(BaseModel):
     name: str
-    description: Optional[str] = None
 
 
 class ProjectSortingUpdate(BaseModel):

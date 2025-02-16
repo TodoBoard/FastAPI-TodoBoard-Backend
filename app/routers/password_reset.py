@@ -1,10 +1,10 @@
-import pyotp
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
 from app.database.db import get_db
-from app.schemas.auth import PasswordResetSchema, PasswordResetCheckSchema
 from app.models.user import User
+from app.schemas.auth import PasswordResetCheckSchema, PasswordResetSchema
 from app.utils.password import hash_password
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+import pyotp
 
 router = APIRouter()
 
