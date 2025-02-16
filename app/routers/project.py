@@ -14,6 +14,7 @@ from app.schemas.project import (
     ProjectSortingUpdate,
     ProjectStatisticsResponse,
     ProjectUpdate,
+    DeleteProjectRequest,
 )
 from app.utils.project import create_project, get_user_projects, update_project
 from app.utils.team_helpers import (
@@ -21,8 +22,9 @@ from app.utils.team_helpers import (
     build_team_members_for_non_owner,
 )
 from app.utils.todo_utils import get_project_todos
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+import pyotp
 
 router = APIRouter()
 
@@ -194,3 +196,55 @@ def get_project_statistics(
             }
             invited_projects.append(project_data)
     return {"my_projects": my_projects, "invited_projects": invited_projects}
+
+
+@router.delete("/project/{project_id}")
+def delete_project(
+    request_body: DeleteProjectRequest,
+    project: Project = Depends(require_project_owner),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.twofa_secret:
+        if not request_body.totp_code:
+            raise HTTPException(
+                status_code=400, detail="TOTP code is required for 2FA enabled users"
+            )
+        totp = pyotp.TOTP(current_user.twofa_secret)
+        if not totp.verify(request_body.totp_code):
+            raise HTTPException(status_code=401, detail="Invalid 2FA code")
+
+    from app.models.team import Team
+    from app.models.todo import Todo
+    from app.models.invite import Invite
+    from app.models.notification import Notification
+    from app.models.user_notification import UserNotification
+
+    teams = db.query(Team).filter(Team.project_id == project.id).all()
+    for team in teams:
+        db.delete(team)
+
+    todos = db.query(Todo).filter(Todo.project_id == project.id).all()
+    for todo in todos:
+        db.delete(todo)
+
+    invites = db.query(Invite).filter(Invite.project_id == project.id).all()
+    for invite in invites:
+        db.delete(invite)
+
+    notifications = (
+        db.query(Notification).filter(Notification.project_id == project.id).all()
+    )
+    for notif in notifications:
+        user_notifs = (
+            db.query(UserNotification)
+            .filter(UserNotification.notification_id == notif.id)
+            .all()
+        )
+        for un in user_notifs:
+            db.delete(un)
+        db.delete(notif)
+
+    db.delete(project)
+    db.commit()
+    return {"message": "Project deleted successfully"}

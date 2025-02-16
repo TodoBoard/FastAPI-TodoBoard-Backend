@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -48,3 +48,7 @@ class ProjectStatistic(BaseModel):
 class ProjectStatisticsResponse(BaseModel):
     my_projects: List[ProjectStatistic]
     invited_projects: List[ProjectStatistic]
+
+
+class DeleteProjectRequest(BaseModel):
+    totp_code: Optional[str] = None

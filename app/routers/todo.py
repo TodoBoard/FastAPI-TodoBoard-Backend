@@ -9,9 +9,12 @@ from app.schemas.todo import (
     TodoResponse,
     TodoUpdateSchema,
 )
-from app.utils.todo_utils import create_todo, get_project_todos, update_todo
+from app.utils.todo_utils import create_todo, update_todo
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from sqlalchemy import case, asc, desc
+from sqlalchemy.sql.expression import nullslast
+from app.models.todo import TodoPriority
 
 router = APIRouter()
 
@@ -20,8 +23,40 @@ router = APIRouter()
 def get_todos(
     project: Project = Depends(require_project_member), db: Session = Depends(get_db)
 ):
-    todos = get_project_todos(db, project.id)
-    return TodoListResponse(todos=todos)
+    order_priority = case(
+        (Todo.priority == TodoPriority.HIGH, 1),
+        (Todo.priority == TodoPriority.MEDIUM, 2),
+        (Todo.priority == TodoPriority.LOW, 3),
+        else_=4,
+    )
+
+    todos = (
+        db.query(Todo)
+        .filter(Todo.project_id == project.id)
+        .order_by(order_priority, nullslast(asc(Todo.due_date)), desc(Todo.updated_at))
+        .all()
+    )
+
+    todos_response = []
+    for todo in todos:
+        user = todo.user
+        todos_response.append(
+            {
+                "id": todo.id,
+                "title": todo.title,
+                "description": todo.description,
+                "status": todo.status,
+                "priority": todo.priority,
+                "due_date": todo.due_date,
+                "created_at": todo.created_at,
+                "updated_at": todo.updated_at,
+                "finished_at": todo.finished_at,
+                "username": user.username,
+                "avatar_id": user.avatar_id,
+            }
+        )
+
+    return {"todos": todos_response}
 
 
 @router.post("/todo", response_model=TodoResponse)
@@ -43,3 +78,13 @@ def update_todo_endpoint(
 ):
     updated_todo = update_todo(db, todo, todo_update.dict(exclude_unset=True))
     return updated_todo
+
+
+@router.delete("/todo/{todo_id}")
+def delete_todo_endpoint(
+    todo: Todo = Depends(require_todo_permission),
+    db: Session = Depends(get_db),
+):
+    db.delete(todo)
+    db.commit()
+    return {"message": "Todo deleted successfully"}

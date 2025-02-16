@@ -29,8 +29,25 @@ class TodoResponse(BaseModel):
         from_attributes = True
 
 
+class TodoGetResponse(BaseModel):
+    id: str
+    title: str
+    description: Optional[str]
+    status: TodoStatus
+    priority: TodoPriority
+    due_date: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
+    finished_at: Optional[datetime]
+    username: str
+    avatar_id: int
+
+    class Config:
+        from_attributes = True
+
+
 class TodoListResponse(BaseModel):
-    todos: list[TodoResponse]
+    todos: list[TodoGetResponse]
 
 
 class TodoUpdateSchema(BaseModel):
