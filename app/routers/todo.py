@@ -2,7 +2,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.database.db import get_db
 from app.models import Todo, Project
-from app.schemas import TodoResponse, TodoListResponse, TodoUpdateSchema, TodoCreate
+from app.schemas.todo import (
+    TodoResponse,
+    TodoListResponse,
+    TodoUpdateSchema,
+    TodoCreate,
+)
 from app.utils.todo_utils import get_project_todos, update_todo, create_todo
 from app.auth.token import get_current_user
 from app.models.user import User

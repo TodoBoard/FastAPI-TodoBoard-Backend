@@ -2,7 +2,7 @@ import pyotp
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database.db import get_db
-from app.schemas import PasswordResetSchema, PasswordResetCheckSchema
+from app.schemas.auth import PasswordResetSchema, PasswordResetCheckSchema
 from app.models.user import User
 from app.utils.password import hash_password
 

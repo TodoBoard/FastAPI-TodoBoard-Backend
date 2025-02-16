@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database.db import get_db
-from app.schemas import (
+from app.schemas.project import (
     ProjectCreate,
     ProjectResponse,
     ProjectListResponse,
@@ -46,7 +46,6 @@ def create_new_project(
         "id": new_project.id,
         "name": new_project.name,
         "description": new_project.description,
-        "is_owner": True,
         "team_members": [
             {
                 "id": current_user.id,
@@ -77,29 +76,35 @@ def list_projects(
                 sorted_projects.append(proj)
     for proj in project_dict.values():
         sorted_projects.append(proj)
-    project_responses = []
+
+    my_projects = []
+    invited_projects = []
     for project in sorted_projects:
-        is_owner = project.user_id == current_user.id
         members = (
             build_team_members_for_owner(project, current_user)
-            if is_owner
+            if project.user_id == current_user.id
             else build_team_members_for_non_owner(project, current_user)
         )
         project_data = {
             "id": project.id,
             "name": project.name,
             "description": project.description,
-            "is_owner": is_owner,
             "team_members": members,
         }
-        project_responses.append(project_data)
+        if project.user_id == current_user.id:
+            my_projects.append(project_data)
+        else:
+            invited_projects.append(project_data)
+
     global_unread_count = (
         db.query(UserNotification)
         .filter_by(user_id=current_user.id, read=False)
         .count()
     )
     return ProjectListResponse(
-        projects=project_responses, unread_notifications_count=global_unread_count
+        my_projects=my_projects,
+        invited_projects=invited_projects,
+        unread_notifications_count=global_unread_count,
     )
 
 
@@ -119,7 +124,6 @@ def get_project_by_id(
         "id": project.id,
         "name": project.name,
         "description": project.description,
-        "is_owner": is_owner,
         "team_members": members,
     }
     return response_data
@@ -140,49 +144,9 @@ def update_project_endpoint(
         "id": updated_project.id,
         "name": updated_project.name,
         "description": updated_project.description,
-        "is_owner": True,
         "team_members": members,
     }
     return response_data
-
-
-@router.post("/project/{project_id}/leave", response_model=dict)
-def leave_project(
-    project: Project = Depends(require_project_member),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    if project.user_id == current_user.id:
-        raise HTTPException(
-            status_code=400, detail="Project owner cannot leave the project"
-        )
-    team_member = (
-        db.query(Team)
-        .filter(Team.project_id == project.id, Team.user_id == current_user.id)
-        .first()
-    )
-    if not team_member:
-        raise HTTPException(
-            status_code=400, detail="User is not a member of the project"
-        )
-    db.delete(team_member)
-    db.commit()
-    title_global = "User Left Project"
-    description_global = (
-        f"User {current_user.username} has left the project {project.name}."
-    )
-    create_project_notification(
-        db, title=title_global, description=description_global, project_id=project.id
-    )
-    title_personal = "Left Project Confirmation"
-    description_personal = f"You have successfully left the project {project.name}."
-    create_personal_notification(
-        db,
-        user_id=current_user.id,
-        title=title_personal,
-        description=description_personal,
-    )
-    return {"message": "Left project successfully"}
 
 
 @router.put("/projects/sort", response_model=ProjectSortingResponse)

@@ -4,7 +4,7 @@ from app.database.db import get_db
 from app.models.invite import Invite
 from app.models.project import Project
 from app.models.team import Team
-from app.schemas import InviteCreate, InviteResponse, InviteUpdate
+from app.schemas.invite import InviteCreate, InviteResponse, InviteUpdate
 from app.auth.token import get_current_user
 from app.models.user import User
 from datetime import datetime, timedelta

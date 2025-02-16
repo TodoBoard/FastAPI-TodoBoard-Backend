@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.schemas import RegisterSchema
+from app.schemas.auth import RegisterSchema
 from app.models import User
 from app.database.db import get_db
 from sqlalchemy.orm import Session

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from app.schemas import LoginSchema
+from app.schemas.auth import LoginSchema
 from app.utils.password import verify_password
 from app.models import User
 from app.database.db import get_db

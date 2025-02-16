@@ -4,7 +4,7 @@ from app.database.db import get_db
 from app.auth.token import get_current_user
 from app.models.notification import Notification
 from app.models.user_notification import UserNotification
-from app.schemas import NotificationResponse
+from app.schemas.notification import NotificationResponse
 from typing import List
 
 router = APIRouter()
