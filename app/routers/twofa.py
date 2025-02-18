@@ -18,7 +18,7 @@ def twofa_setup(
     secret = pyotp.random_base32()
     totp = pyotp.TOTP(secret)
     provisioning_uri = totp.provisioning_uri(
-        name=current_user.username, issuer_name="TODO APP"
+        name=current_user.username, issuer_name="TodoBoard"
     )
     current_user.pending_twofa_secret = secret
     db.commit()
@@ -59,3 +59,14 @@ def twofa_disable(
     current_user.pending_twofa_secret = None
     db.commit()
     return {"message": "2FA disabled successfully"}
+
+
+@router.get("/2fa/status", tags=["2FA"])
+def twofa_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return {
+        "enabled": current_user.twofa_secret is not None,
+        "setup_pending": current_user.pending_twofa_secret is not None,
+    }

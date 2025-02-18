@@ -50,8 +50,28 @@ def mark_notification_as_read(
     )
     if not user_notif:
         raise HTTPException(status_code=404, detail="Notification not found")
+
     if user_notif.read:
-        return {"message": "Notification already marked as read"}
+        unread_count = (
+            db.query(UserNotification)
+            .filter_by(user_id=current_user.id, read=False)
+            .count()
+        )
+        return {
+            "message": "Notification already marked as read",
+            "unread_notifications_count": unread_count,
+        }
+
     user_notif.read = True
     db.commit()
-    return {"message": "Notification marked as read"}
+
+    unread_count = (
+        db.query(UserNotification)
+        .filter_by(user_id=current_user.id, read=False)
+        .count()
+    )
+
+    return {
+        "message": "Notification marked as read",
+        "unread_notifications_count": unread_count,
+    }

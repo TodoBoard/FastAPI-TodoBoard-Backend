@@ -65,7 +65,20 @@ def get_invite(invite_id: str, db: Session = Depends(get_db)):
     invite = db.query(Invite).filter(Invite.id == invite_id).first()
     if not invite:
         raise HTTPException(status_code=404, detail="Invite not found")
-    return invite
+    project = db.query(Project).filter(Project.id == invite.project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    invite_creator_username = project.user.username if project.user else "Unknown"
+    return {
+        "id": invite.id,
+        "project_id": invite.project_id,
+        "expires_at": invite.expires_at,
+        "max_usage": invite.max_usage,
+        "usage_count": invite.usage_count,
+        "active": invite.active,
+        "project_name": project.name,
+        "invite_creator_username": invite_creator_username,
+    }
 
 
 @router.post("/invite/{invite_id}/join")

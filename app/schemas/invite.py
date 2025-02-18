@@ -21,6 +21,8 @@ class InviteResponse(BaseModel):
     max_usage: Optional[int] = None
     usage_count: int
     active: bool
+    project_name: str
+    invite_creator_username: str
 
     class Config:
         from_attributes = True
