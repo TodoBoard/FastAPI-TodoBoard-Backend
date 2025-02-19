@@ -71,11 +71,15 @@ def delete_team_member(
     if not team_member:
         raise HTTPException(status_code=404, detail="Team member not found")
 
+    removed_user = db.query(User).filter(User.id == member_id).first()
+    if not removed_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
     db.delete(team_member)
     db.commit()
 
     title = "Team Member Removed"
-    description = f"User with ID {member_id} has been removed from project {project.name} by the owner."
+    description = f"{removed_user.username} has been removed from project {project.name} by the owner."
     create_project_notification(
         db, title=title, description=description, project_id=project.id
     )

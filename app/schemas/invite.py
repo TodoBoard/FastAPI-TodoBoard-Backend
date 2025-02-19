@@ -23,7 +23,7 @@ class InviteResponse(BaseModel):
     active: bool
     project_name: str
     invite_creator_username: str
-    invite_creator_avatar_id: int
+    invite_creator_avatar_id: Optional[int] = None
 
     class Config:
         from_attributes = True

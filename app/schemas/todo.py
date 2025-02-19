@@ -7,7 +7,7 @@ from pydantic import BaseModel
 class TodoCreate(BaseModel):
     title: str
     description: Optional[str] = None
-    priority: TodoPriority = TodoPriority.MEDIUM
+    priority: Optional[TodoPriority] = None
     due_date: Optional[datetime] = None
     project_id: str
 
