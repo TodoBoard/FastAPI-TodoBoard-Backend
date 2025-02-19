@@ -78,6 +78,7 @@ def get_invite(invite_id: str, db: Session = Depends(get_db)):
         "active": invite.active,
         "project_name": project.name,
         "invite_creator_username": invite_creator_username,
+        "invite_creator_avatar_id": project.user.avatar_id if project.user else None,
     }
 
 

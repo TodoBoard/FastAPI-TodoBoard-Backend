@@ -14,3 +14,15 @@ class Invite(Base):
     active = Column(Boolean, nullable=False, default=True)
 
     project = relationship("Project", back_populates="invites")
+
+    @property
+    def project_name(self) -> str:
+        return self.project.name if self.project and self.project.name else ""
+
+    @property
+    def invite_creator_username(self) -> str:
+        return (
+            self.project.user.username
+            if self.project and self.project.user and self.project.user.username
+            else "Unknown"
+        )
