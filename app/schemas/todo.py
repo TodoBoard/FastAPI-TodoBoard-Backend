@@ -17,7 +17,7 @@ class TodoResponse(BaseModel):
     title: str
     description: Optional[str]
     status: TodoStatus
-    priority: TodoPriority
+    priority: Optional[TodoPriority] = None
     due_date: Optional[datetime]
     created_at: datetime
     updated_at: datetime
@@ -34,7 +34,7 @@ class TodoGetResponse(BaseModel):
     title: str
     description: Optional[str]
     status: TodoStatus
-    priority: TodoPriority
+    priority: Optional[TodoPriority] = None
     due_date: Optional[datetime]
     created_at: datetime
     updated_at: datetime
