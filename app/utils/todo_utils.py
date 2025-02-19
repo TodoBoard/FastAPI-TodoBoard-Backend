@@ -10,9 +10,8 @@ def get_project_todos(db: Session, project_id: str):
 
 def update_todo(db: Session, todo: Todo, data: dict) -> Todo:
     for key, value in data.items():
-        if value is not None:
-            setattr(todo, key, value)
-    if "status" in data and data["status"] is not None:
+        setattr(todo, key, value)
+    if "status" in data:
         if data["status"] == TodoStatus.DONE:
             todo.finished_at = datetime.utcnow()
         else:
