@@ -41,6 +41,7 @@ class TodoGetResponse(BaseModel):
     finished_at: Optional[datetime]
     username: str
     avatar_id: int
+    project_id: Optional[str] = None
 
     class Config:
         from_attributes = True
