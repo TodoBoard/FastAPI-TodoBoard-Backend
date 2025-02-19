@@ -98,6 +98,7 @@ def get_todos(
                 "finished_at": todo.finished_at,
                 "username": user.username,
                 "avatar_id": user.avatar_id,
+                "project_id": todo.project_id,
             }
         )
 
