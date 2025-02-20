@@ -8,6 +8,7 @@ from .password_reset import router as password_reset_router
 from .notifications import router as notifications_router
 from .invite import router as invite_router
 from .team import router as team_router
+from .form import router as form_router
 
 router = APIRouter()
 router.include_router(login_router, tags=["auth"])
@@ -19,3 +20,4 @@ router.include_router(password_reset_router, tags=["auth"])
 router.include_router(notifications_router, tags=["notifications"])
 router.include_router(invite_router, tags=["invite"])
 router.include_router(team_router, tags=["team management"])
+router.include_router(form_router, tags=["form"])
