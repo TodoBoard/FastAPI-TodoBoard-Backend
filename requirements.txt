@@ -7,3 +7,4 @@ python-jose[cryptography]==3.3.0
 pyotp==2.9.0
 psycopg2==2.9.10
 aiohttp==3.11.1
+gunicorn
