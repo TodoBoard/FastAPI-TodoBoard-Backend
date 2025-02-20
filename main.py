@@ -13,9 +13,9 @@ from app.routers import router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None)
 
-origins = ["http://localhost:3000"]
+origins = ["https://todoboard.net"]
 
 app.add_middleware(
     CORSMiddleware,

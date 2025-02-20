@@ -22,7 +22,11 @@ class Todo(Base):
     id = Column(String(36), primary_key=True)
     title = Column(String(200), nullable=False)
     description = Column(String(1000), nullable=True)
-    status = Column(Enum(TodoStatus), nullable=False, default=TodoStatus.TODO)
+    status = Column(
+        Enum(TodoStatus, name="todostatus", create_type=False),
+        nullable=False,
+        default=TodoStatus.TODO,
+    )
     priority = Column(Enum(TodoPriority), nullable=True)
     due_date = Column(DateTime, nullable=True)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
