@@ -3,6 +3,7 @@ from app.schemas.form import Form
 from dotenv import load_dotenv
 import os
 import aiohttp
+from datetime import datetime
 
 router = APIRouter()
 
@@ -26,12 +27,14 @@ async def form(form: Form):
                     },
                     {"name": "Message", "value": form.message, "inline": False},
                 ],
-                "timestamp": "now",
+                "timestamp": datetime.utcnow().isoformat(),
             }
         ]
     }
 
+    discord_webhook_url = os.getenv("DISCORD_WEBHOOK_URL")
+
     async with aiohttp.ClientSession() as session:
-        await session.post(os.getenv("DISCORD_WEBHOOK_URL"), json=embed)
+        await session.post(discord_webhook_url, json=embed)
 
     return {"message": "Form submitted successfully"}

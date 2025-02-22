@@ -1,4 +1,4 @@
-# TodoBoard
+# [TodoBoard](https://todoboard.net)
 
 TodoBoard is a modern backend service built with FastAPI for managing tasks and projects. It offers secure user authentication, robust two-factor authentication (2FA) using TOTP, and a comprehensive set of features for project management, including team collaboration, task tracking, and notifications for important events.
 
