@@ -13,7 +13,7 @@ from app.routers import router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(docs_url=None, redoc_url=None)
+app = FastAPI()
 
 origins = ["https://todoboard.net"]
 
