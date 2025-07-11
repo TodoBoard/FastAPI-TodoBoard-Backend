@@ -3,6 +3,7 @@ import logging
 import os
 from app.database.db import Base, engine, SessionLocal
 from sqlalchemy import Column, String
+from sqlalchemy.exc import IntegrityError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -47,8 +48,14 @@ def run_migrations():
 
                 new_migration = Migration(filename=filename)
                 db_session.add(new_migration)
-                db_session.commit()
-                logger.info(f"Successfully applied {filename}.")
+                try:
+                    db_session.commit()
+                    logger.info(f"Successfully applied {filename}.")
+                except IntegrityError:
+                    db_session.rollback()
+                    logger.warning(
+                        f"Migration {filename} was already applied by another process. Skipping."
+                    )
 
         if not migration_files:
             logger.info("No migration files found.")
