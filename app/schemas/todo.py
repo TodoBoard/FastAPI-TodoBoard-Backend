@@ -10,6 +10,7 @@ class TodoCreate(BaseModel):
     priority: Optional[TodoPriority] = None
     due_date: Optional[datetime] = None
     project_id: str
+    assigned_user_id: Optional[str] = None
 
 
 class TodoResponse(BaseModel):
@@ -23,6 +24,9 @@ class TodoResponse(BaseModel):
     updated_at: datetime
     finished_at: Optional[datetime]
     user_id: str
+    assigned_user_id: Optional[str] = None
+    assignee_username: Optional[str] = None
+    assignee_avatar_id: Optional[int] = None
     project_id: str
 
     class Config:
@@ -41,6 +45,9 @@ class TodoGetResponse(BaseModel):
     finished_at: Optional[datetime]
     username: str
     avatar_id: int
+    assignee_username: Optional[str] = None
+    assignee_avatar_id: Optional[int] = None
+    assigned_user_id: Optional[str] = None
     project_id: str
 
     class Config:
@@ -57,3 +64,4 @@ class TodoUpdateSchema(BaseModel):
     status: Optional[TodoStatus] = None
     priority: Optional[TodoPriority] = None
     due_date: Optional[datetime] = None
+    assigned_user_id: Optional[str] = None

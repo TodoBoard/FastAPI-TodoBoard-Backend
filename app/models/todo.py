@@ -36,5 +36,15 @@ class Todo(Base):
     finished_at = Column(DateTime, nullable=True)
     user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
     project_id = Column(String(36), ForeignKey("projects.id"), nullable=False)
-    user = relationship("User", back_populates="todos")
+    assigned_user_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    user = relationship("User", foreign_keys=[user_id], back_populates="todos")
+    assignee = relationship("User", foreign_keys=[assigned_user_id], back_populates="assigned_todos")
     project = relationship("Project", back_populates="todos")
+
+    @property
+    def assignee_username(self):
+        return self.assignee.username if self.assignee else None
+
+    @property
+    def assignee_avatar_id(self):
+        return self.assignee.avatar_id if self.assignee else None

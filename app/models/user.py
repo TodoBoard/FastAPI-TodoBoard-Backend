@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, Integer
 from sqlalchemy.orm import relationship
 from app.database.db import Base
+from app.models.todo import Todo
 
 
 class User(Base):
@@ -13,5 +14,6 @@ class User(Base):
     avatar_id = Column(Integer, nullable=False)
 
     projects = relationship("Project", back_populates="user")
-    todos = relationship("Todo", back_populates="user")
+    todos = relationship("Todo", foreign_keys=[Todo.user_id], back_populates="user")
+    assigned_todos = relationship("Todo", foreign_keys="Todo.assigned_user_id", back_populates="assignee")
     notifications = relationship("UserNotification", back_populates="user")

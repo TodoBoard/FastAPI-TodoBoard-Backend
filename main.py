@@ -1,4 +1,5 @@
 from app.database.db import Base, engine
+from app.migrations.migration_runner import run_migrations
 from app.models import (
     invite,
     notification,
@@ -25,7 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-Base.metadata.create_all(bind=engine)
+run_migrations()
 
 app.include_router(router)
 
