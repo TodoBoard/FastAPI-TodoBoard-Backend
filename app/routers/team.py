@@ -8,14 +8,16 @@ from app.utils.notification_utils import (
     create_personal_notification,
     create_project_notification,
 )
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
+from app.websockets.connection_manager import manager
 
 router = APIRouter()
 
 
 @router.post("/project/{project_id}/leave", response_model=dict)
 def leave_project(
+    background_tasks: BackgroundTasks,
     project: Project = Depends(require_project_member),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -50,12 +52,27 @@ def leave_project(
         title=title_personal,
         description=description_personal,
     )
+    recipients = {project.user_id}
+    for tm in project.team_members:
+        recipients.add(tm.user_id)
+    message = {
+        "event": "team.member_left",
+        "project_id": project.id,
+        "project_name": project.name,
+        "member": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "avatar_id": current_user.avatar_id,
+        },
+    }
+    background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
     return {"message": "Left project successfully"}
 
 
 @router.delete("/project/{project_id}/team/{member_id}", response_model=dict)
 def delete_team_member(
     member_id: str,
+    background_tasks: BackgroundTasks,
     project: Project = Depends(require_project_owner),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -83,5 +100,21 @@ def delete_team_member(
     create_project_notification(
         db, title=title, description=description, project_id=project.id
     )
+
+    recipients = {project.user_id}
+    for tm in project.team_members:
+        recipients.add(tm.user_id)
+    recipients.add(member_id)
+    message = {
+        "event": "team.member_left",
+        "project_id": project.id,
+        "project_name": project.name,
+        "member": {
+            "id": removed_user.id,
+            "username": removed_user.username,
+            "avatar_id": removed_user.avatar_id,
+        },
+    }
+    background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
 
     return {"message": "Team member removed successfully"}

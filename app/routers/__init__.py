@@ -9,6 +9,7 @@ from .notifications import router as notifications_router
 from .invite import router as invite_router
 from .team import router as team_router
 from .form import router as form_router
+from .websocket import router as websocket_router
 
 router = APIRouter()
 router.include_router(login_router, tags=["auth"])
@@ -21,3 +22,4 @@ router.include_router(notifications_router, tags=["notifications"])
 router.include_router(invite_router, tags=["invite"])
 router.include_router(team_router, tags=["team management"])
 router.include_router(form_router, tags=["form"])
+router.include_router(websocket_router, tags=["realtime"])

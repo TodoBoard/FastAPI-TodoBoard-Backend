@@ -2,6 +2,7 @@ from app.models.notification import Notification
 from app.models.user_notification import UserNotification
 from sqlalchemy.orm import Session
 import uuid
+from app.websockets.connection_manager import manager
 
 
 def create_project_notification(
@@ -30,6 +31,20 @@ def create_project_notification(
                 user_id=user_id, notification_id=notification.id, read=False
             )
             db.add(user_notification)
+            # Real-time push
+            manager.ts_send_personal(
+                user_id,
+                {
+                    "event": "notification.new",
+                    "notification": {
+                        "id": notification.id,
+                        "title": notification.title,
+                        "description": notification.description,
+                        "created_at": notification.created_at.isoformat(),
+                        "project_id": notification.project_id,
+                    },
+                },
+            )
         db.commit()
     return notification
 
@@ -51,4 +66,18 @@ def create_personal_notification(
     )
     db.add(user_notification)
     db.commit()
+    # Real-time push for personal notification
+    manager.ts_send_personal(
+        user_id,
+        {
+            "event": "notification.new",
+            "notification": {
+                "id": notification.id,
+                "title": notification.title,
+                "description": notification.description,
+                "created_at": notification.created_at.isoformat(),
+                "project_id": notification.project_id,
+            },
+        },
+    )
     return notification

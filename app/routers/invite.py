@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from typing import List
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.auth.token import get_current_user
@@ -14,6 +14,7 @@ from app.models.team import Team
 from app.models.user import User
 from app.schemas.invite import InviteCreate, InviteResponse, InviteUpdate
 from app.utils.notification_utils import create_project_notification
+from app.websockets.connection_manager import manager
 
 router = APIRouter()
 
@@ -85,6 +86,7 @@ def get_invite(invite_id: str, db: Session = Depends(get_db)):
 @router.post("/invite/{invite_id}/join")
 def join_invite(
     invite_id: str,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -117,6 +119,22 @@ def join_invite(
     create_project_notification(
         db, title=title, description=description, project_id=project.id
     )
+
+    recipients = {project.user_id}
+    for tm in project.team_members:
+        recipients.add(tm.user_id)
+    recipients.remove(current_user.id)
+    message = {
+        "event": "team.member_joined",
+        "project_id": project.id,
+        "project_name": project.name,
+        "member": {
+            "id": current_user.id,
+            "username": current_user.username,
+            "avatar_id": current_user.avatar_id,
+        },
+    }
+    background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
     return {"message": "Joined project successfully"}
 
 

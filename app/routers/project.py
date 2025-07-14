@@ -22,9 +22,10 @@ from app.utils.team_helpers import (
     build_team_members_for_non_owner,
 )
 from app.utils.todo_utils import get_project_todos
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 import pyotp
+from app.websockets.connection_manager import manager
 
 router = APIRouter()
 
@@ -32,6 +33,7 @@ router = APIRouter()
 @router.post("/project", response_model=ProjectResponse)
 def create_new_project(
     project: ProjectCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -47,6 +49,8 @@ def create_new_project(
             }
         ],
     }
+    message = {"event": "project.created", "project": response_data}
+    background_tasks.add_task(manager.ts_send_personal, current_user.id, message)
     return response_data
 
 
@@ -122,6 +126,7 @@ def get_project_by_id(
 @router.put("/project/{project_id}", response_model=ProjectResponse)
 def update_project_endpoint(
     project_update: ProjectUpdate,
+    background_tasks: BackgroundTasks,
     project: Project = Depends(require_project_owner),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -133,12 +138,18 @@ def update_project_endpoint(
         "name": updated_project.name,
         "team_members": members,
     }
+    message = {"event": "project.updated", "project": response_data}
+    recipients = {project.user_id}
+    for tm in project.team_members:
+        recipients.add(tm.user_id)
+    background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
     return response_data
 
 
 @router.put("/projects/sort", response_model=ProjectSortingResponse)
 def update_project_sorting(
     sorting_update: ProjectSortingUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -156,6 +167,8 @@ def update_project_sorting(
         db.add(sorting_record)
     db.commit()
     db.refresh(sorting_record)
+    message = {"event": "project.sorted", "project_ids": sorting_record.sorting}
+    background_tasks.add_task(manager.ts_send_personal, current_user.id, message)
     return ProjectSortingResponse(project_ids=sorting_record.sorting)
 
 
@@ -201,6 +214,7 @@ def get_project_statistics(
 @router.delete("/project/{project_id}")
 def delete_project(
     request_body: DeleteProjectRequest,
+    background_tasks: BackgroundTasks,
     project: Project = Depends(require_project_owner),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -247,4 +261,9 @@ def delete_project(
 
     db.delete(project)
     db.commit()
+    recipients = {project.user_id}
+    for tm in project.team_members:
+        recipients.add(tm.user_id)
+    message = {"event": "project.deleted", "project_id": project.id}
+    background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
     return {"message": "Project deleted successfully"}

@@ -10,12 +10,13 @@ from app.schemas.todo import (
     TodoUpdateSchema,
 )
 from app.utils.todo_utils import create_todo, update_todo, parse_and_get_assignee
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import case, asc, desc
 from sqlalchemy.sql.expression import nullslast
 from app.models.todo import TodoPriority
 from app.utils.project import get_user_projects
+from app.websockets.connection_manager import manager
 
 router = APIRouter()
 
@@ -128,6 +129,7 @@ def get_todos(
 @router.post("/todo", response_model=TodoResponse)
 def create_todo_endpoint(
     todo: TodoCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -143,12 +145,39 @@ def create_todo_endpoint(
         todo_data["assigned_user_id"] = parsed_assignee_id
 
     new_todo = create_todo(db, todo_data, current_user.id)
+
+    recipients = {project.user_id}
+    for tm in project.team_members:
+        recipients.add(tm.user_id)
+    if new_todo.assigned_user_id:
+        recipients.add(new_todo.assigned_user_id)
+
+    message = {
+        "event": "todo.created",
+        "todo": {
+            "id": new_todo.id,
+            "title": new_todo.title,
+            "description": new_todo.description,
+            "status": new_todo.status.value,
+            "priority": new_todo.priority.value if new_todo.priority else None,
+            "due_date": new_todo.due_date.isoformat() if new_todo.due_date else None,
+            "created_at": new_todo.created_at.isoformat(),
+            "updated_at": new_todo.updated_at.isoformat(),
+            "finished_at": new_todo.finished_at.isoformat() if new_todo.finished_at else None,
+            "project_id": new_todo.project_id,
+            "assigned_user_id": new_todo.assigned_user_id,
+            "assignee_username": new_todo.assignee.username if new_todo.assignee else None,
+            "assignee_avatar_id": new_todo.assignee.avatar_id if new_todo.assignee else None,
+        },
+    }
+    background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
     return new_todo
 
 
 @router.put("/todo/{todo_id}", response_model=TodoResponse)
 def update_todo_endpoint(
     todo_update: TodoUpdateSchema,
+    background_tasks: BackgroundTasks,
     todo: Todo = Depends(require_todo_permission),
     db: Session = Depends(get_db),
 ):
@@ -164,14 +193,54 @@ def update_todo_endpoint(
             update_data["assigned_user_id"] = parsed_assignee_id
 
     updated_todo = update_todo(db, todo, update_data)
+
+    project = db.query(Project).filter(Project.id == updated_todo.project_id).first()
+    recipients = {project.user_id}
+    for tm in project.team_members:
+        recipients.add(tm.user_id)
+    if updated_todo.assigned_user_id:
+        recipients.add(updated_todo.assigned_user_id)
+
+    message = {
+        "event": "todo.updated",
+        "todo": {
+            "id": updated_todo.id,
+            "title": updated_todo.title,
+            "description": updated_todo.description,
+            "status": updated_todo.status.value,
+            "priority": updated_todo.priority.value if updated_todo.priority else None,
+            "due_date": updated_todo.due_date.isoformat() if updated_todo.due_date else None,
+            "created_at": updated_todo.created_at.isoformat(),
+            "updated_at": updated_todo.updated_at.isoformat(),
+            "finished_at": updated_todo.finished_at.isoformat() if updated_todo.finished_at else None,
+            "project_id": updated_todo.project_id,
+            "assigned_user_id": updated_todo.assigned_user_id,
+            "assignee_username": updated_todo.assignee.username if updated_todo.assignee else None,
+            "assignee_avatar_id": updated_todo.assignee.avatar_id if updated_todo.assignee else None,
+        },
+    }
+    background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
     return updated_todo
 
 
 @router.delete("/todo/{todo_id}")
 def delete_todo_endpoint(
+    background_tasks: BackgroundTasks,
     todo: Todo = Depends(require_todo_permission),
     db: Session = Depends(get_db),
 ):
     db.delete(todo)
     db.commit()
+
+    project = db.query(Project).filter(Project.id == todo.project_id).first()
+    recipients = {project.user_id}
+    for tm in project.team_members:
+        recipients.add(tm.user_id)
+
+    message = {
+        "event": "todo.deleted",
+        "todo_id": todo.id,
+        "project_id": todo.project_id,
+    }
+    background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
     return {"message": "Todo deleted successfully"}
