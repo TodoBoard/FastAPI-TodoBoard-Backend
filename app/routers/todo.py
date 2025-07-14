@@ -17,6 +17,9 @@ from sqlalchemy.sql.expression import nullslast
 from app.models.todo import TodoPriority
 from app.utils.project import get_user_projects
 from app.websockets.connection_manager import manager
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -170,6 +173,7 @@ def create_todo_endpoint(
             "assignee_avatar_id": new_todo.assignee.avatar_id if new_todo.assignee else None,
         },
     }
+    logger.info("Broadcasting 'todo.created' for todo_id %s to recipients %s", new_todo.id, list(recipients))
     background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
     return new_todo
 
@@ -219,6 +223,7 @@ def update_todo_endpoint(
             "assignee_avatar_id": updated_todo.assignee.avatar_id if updated_todo.assignee else None,
         },
     }
+    logger.info("Broadcasting 'todo.updated' for todo_id %s to recipients %s", updated_todo.id, list(recipients))
     background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
     return updated_todo
 
@@ -242,5 +247,6 @@ def delete_todo_endpoint(
         "todo_id": todo.id,
         "project_id": todo.project_id,
     }
+    logger.info("Broadcasting 'todo.deleted' for todo_id %s to recipients %s", todo.id, list(recipients))
     background_tasks.add_task(manager.ts_broadcast, list(recipients), message)
     return {"message": "Todo deleted successfully"}
