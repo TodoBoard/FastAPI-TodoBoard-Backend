@@ -6,6 +6,7 @@ from app.database.db import get_db
 from app.models.notification import Notification
 from app.models.user_notification import UserNotification
 from app.schemas.notification import NotificationResponse
+from app.websockets.connection_manager import manager
 
 router = APIRouter()
 
@@ -74,4 +75,42 @@ def mark_notification_as_read(
     return {
         "message": "Notification marked as read",
         "unread_notifications_count": unread_count,
+    }
+
+
+@router.post("/notifications/read-all")
+def mark_all_notifications_as_read(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Mark every unread notification for the current user as read."""
+    unread_notifs = (
+        db.query(UserNotification)
+        .filter_by(user_id=current_user.id, read=False)
+        .all()
+    )
+
+    if not unread_notifs:
+        manager.ts_send_personal(
+            current_user.id,
+            {"event": "notification.read_all", "unread_notifications_count": 0},
+        )
+        return {
+            "message": "No unread notifications found",
+            "unread_notifications_count": 0,
+        }
+
+    for un in unread_notifs:
+        un.read = True
+
+    db.commit()
+
+    manager.ts_send_personal(
+        current_user.id,
+        {"event": "notification.read_all", "unread_notifications_count": 0},
+    )
+
+    return {
+        "message": "All notifications marked as read",
+        "unread_notifications_count": 0,
     }

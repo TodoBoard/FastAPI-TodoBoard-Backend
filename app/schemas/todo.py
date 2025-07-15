@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 from app.models.todo import TodoPriority, TodoStatus
 from pydantic import BaseModel
+from pydantic import field_validator
 
 
 class TodoCreate(BaseModel):
@@ -11,6 +12,12 @@ class TodoCreate(BaseModel):
     due_date: Optional[datetime] = None
     project_id: str
     assigned_user_id: Optional[str] = None
+
+    @field_validator("priority", mode="before")
+    def empty_priority_to_none(cls, v):
+        if v == "":
+            return None
+        return v
 
 
 class TodoResponse(BaseModel):
@@ -65,3 +72,9 @@ class TodoUpdateSchema(BaseModel):
     priority: Optional[TodoPriority] = None
     due_date: Optional[datetime] = None
     assigned_user_id: Optional[str] = None
+
+    @field_validator("priority", mode="before")
+    def empty_priority_to_none_u(cls, v):
+        if v == "":
+            return None
+        return v

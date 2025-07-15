@@ -19,21 +19,29 @@ from app.websockets.connection_manager import manager
 router = APIRouter()
 
 
-def parse_duration(duration: str) -> datetime:
+def parse_duration(duration: str | None):
+    """Convert a duration string like '24h', '7d' into an expiry datetime.
+
+    Special values:
+    • `None`, empty string, 'never' or 'infinite' → returns ``None`` meaning no expiry.
+    """
+    if not duration or duration.lower() in {"never", "infinite", "none"}:
+        return None
+
     if duration.endswith("h"):
         try:
             hours = int(duration[:-1])
             return datetime.utcnow() + timedelta(hours=hours)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid duration format")
-    elif duration.endswith("d"):
+    if duration.endswith("d"):
         try:
             days = int(duration[:-1])
             return datetime.utcnow() + timedelta(days=days)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid duration format")
-    else:
-        raise HTTPException(status_code=400, detail="Invalid duration format")
+
+    raise HTTPException(status_code=400, detail="Invalid duration format")
 
 
 @router.post("/project/{project_id}/invite", response_model=InviteResponse)
@@ -42,16 +50,18 @@ def create_invite(
     project: Project = Depends(require_project_owner),
     db: Session = Depends(get_db),
 ):
-    expires_at = parse_duration(invite_data.duration) if invite_data.duration else None
-    if invite_data.max_usage is not None and invite_data.max_usage <= 0:
-        raise HTTPException(
-            status_code=400, detail="max_usage must be a positive integer"
-        )
+    expires_at = parse_duration(invite_data.duration)
+
+    max_usage: int | None
+    if invite_data.max_usage is None or invite_data.max_usage <= 0:
+        max_usage = None
+    else:
+        max_usage = invite_data.max_usage
     new_invite = Invite(
         id=str(uuid.uuid4()),
         project_id=project.id,
         expires_at=expires_at,
-        max_usage=invite_data.max_usage,
+        max_usage=max_usage,
         usage_count=0,
         active=True,
     )
@@ -147,11 +157,7 @@ def update_invite(
     if invite_update.duration is not None:
         invite.expires_at = parse_duration(invite_update.duration)
     if invite_update.max_usage is not None:
-        if invite_update.max_usage <= 0:
-            raise HTTPException(
-                status_code=400, detail="max_usage must be a positive integer"
-            )
-        invite.max_usage = invite_update.max_usage
+        invite.max_usage = None if invite_update.max_usage <= 0 else invite_update.max_usage
     if invite_update.active is not None:
         invite.active = invite_update.active
     db.commit()
