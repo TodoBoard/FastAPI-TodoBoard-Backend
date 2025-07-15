@@ -16,7 +16,7 @@ from app.routers import router
 
 app = FastAPI()
 
-origins = ["https://todoboard.net", "http://localhost:3000"]
+origins = ["https://todoboard.net", "https://www.todoboard.net"]
 
 app.add_middleware(
     CORSMiddleware,
