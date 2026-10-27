@@ -2,13 +2,14 @@ import importlib.util
 import logging
 import os
 from app.database.db import Base, engine, SessionLocal
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, text
 from sqlalchemy.exc import IntegrityError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 MIGRATIONS_DIR = os.path.dirname(__file__)
+MIGRATION_LOCK_ID = 7_243_000
 
 
 class Migration(Base):
@@ -17,7 +18,17 @@ class Migration(Base):
 
 
 def run_migrations():
-    """Checks for and applies all new migrations."""
+    """Checks for and applies all new migrations. Holds a Postgres advisory lock,
+    so several gunicorn workers starting at once don't create tables concurrently."""
+    with engine.connect() as lock_conn:
+        lock_conn.execute(text("SELECT pg_advisory_lock(:id)"), {"id": MIGRATION_LOCK_ID})
+        try:
+            _run_migrations()
+        finally:
+            lock_conn.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": MIGRATION_LOCK_ID})
+
+
+def _run_migrations():
     logger.info("Checking for new migrations...")
     Migration.metadata.create_all(bind=engine)
     db_session = SessionLocal()
