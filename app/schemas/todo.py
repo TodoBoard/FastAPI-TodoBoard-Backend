@@ -56,6 +56,7 @@ class TodoGetResponse(BaseModel):
     assignee_avatar_id: Optional[int] = None
     assigned_user_id: Optional[str] = None
     project_id: str
+    attachment_count: int = 0
 
     class Config:
         from_attributes = True

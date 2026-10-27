@@ -1,3 +1,6 @@
+import asyncio
+import time
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.db import Base, engine
@@ -11,10 +14,32 @@ from app.models import (
     user,
     user_notification,
     user_project_sorting,
+    attachment,
 )
 from app.routers import router
+from app.utils import storage
 
-app = FastAPI()
+
+async def storage_maintenance_loop():
+    """Purges deleted attachments every 15 min, reconciles R2 with the DB daily."""
+    last_full = 0.0
+    while True:
+        full = time.time() - last_full > 24 * 3600
+        await asyncio.to_thread(storage.run_maintenance, full)
+        if full:
+            last_full = time.time()
+        await asyncio.sleep(15 * 60)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(storage_maintenance_loop()) if storage.is_configured() else None
+    yield
+    if task:
+        task.cancel()
+
+
+app = FastAPI(lifespan=lifespan)
 
 origins = ["https://todoboard.net", "https://www.todoboard.net"]
 

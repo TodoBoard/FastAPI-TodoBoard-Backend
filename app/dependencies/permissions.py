@@ -1,5 +1,6 @@
 from app.auth.token import get_current_user
 from app.database.db import get_db
+from app.models.attachment import AttachmentStatus, TodoAttachment
 from app.models.invite import Invite
 from app.models.project import Project
 from app.models.todo import Todo
@@ -82,3 +83,29 @@ def require_todo_permission(
             detail="Not authorized to modify this todo",
         )
     return todo
+
+
+def require_attachment_permission(
+    attachment_id: str = Path(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> TodoAttachment:
+    attachment = (
+        db.query(TodoAttachment)
+        .filter(
+            TodoAttachment.id == attachment_id,
+            TodoAttachment.status != AttachmentStatus.DELETED,
+        )
+        .first()
+    )
+    if not attachment or not attachment.todo:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    project = attachment.todo.project
+    if project.user_id != current_user.id and not any(
+        tm.user_id == current_user.id for tm in project.team_members
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access this attachment",
+        )
+    return attachment

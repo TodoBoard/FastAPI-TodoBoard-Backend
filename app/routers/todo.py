@@ -17,6 +17,7 @@ from sqlalchemy.sql.expression import nullslast
 from app.models.todo import TodoPriority
 from app.utils.project import get_user_projects
 from app.websockets.connection_manager import manager
+from app.utils.storage import get_attachment_counts
 import logging
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,8 @@ def get_all_todos(
         query.order_by(order_priority, order_assigned, nullslast(asc(Todo.due_date)), desc(Todo.updated_at)).all()
     )
 
+    attachment_counts = get_attachment_counts(db, [todo.id for todo in todos])
+
     todos_response = []
     for todo in todos:
         creator = todo.user
@@ -72,6 +75,7 @@ def get_all_todos(
                 "assigned_user_id": todo.assigned_user_id,
                 "assignee_username": assignee.username if assignee else None,
                 "assignee_avatar_id": assignee.avatar_id if assignee else None,
+                "attachment_count": attachment_counts.get(todo.id, 0),
             }
         )
 
@@ -102,6 +106,8 @@ def get_todos(
         query.order_by(order_priority, order_assigned, nullslast(asc(Todo.due_date)), desc(Todo.updated_at)).all()
     )
 
+    attachment_counts = get_attachment_counts(db, [todo.id for todo in todos])
+
     todos_response = []
     for todo in todos:
         creator = todo.user
@@ -123,6 +129,7 @@ def get_todos(
                 "assigned_user_id": todo.assigned_user_id,
                 "assignee_username": assignee.username if assignee else None,
                 "assignee_avatar_id": assignee.avatar_id if assignee else None,
+                "attachment_count": attachment_counts.get(todo.id, 0),
             }
         )
 
